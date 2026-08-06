@@ -593,6 +593,7 @@ def test_remote_conversation_over_real_server(server_env, patched_llm):
         after = client.post(runtime_url + "/reprovision")
         after.raise_for_status()
         assert after.json() == before.json()
+    conv.refresh_mcp_tools()
 
     # Send a message and run
     conv.send_message("Say hello")
