@@ -14,7 +14,7 @@ import shutil
 import tempfile
 import threading
 import uuid
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from enum import StrEnum
 from pathlib import Path
 from typing import TYPE_CHECKING, Final
@@ -98,9 +98,15 @@ class TaskManager:
     def __init__(
         self,
         confirmation_handler: ConfirmationHandler | None = None,
+        allowed_subagent_types: Sequence[str] | None = None,
     ):
         self._parent_conversation: LocalConversation | None = None
         self._confirmation_handler = confirmation_handler
+        self._allowed_subagent_types = (
+            frozenset(allowed_subagent_types)
+            if allowed_subagent_types is not None
+            else None
+        )
 
         self._tasks: dict[str, Task] = {}
         self._tasks_lock = threading.Lock()
@@ -181,6 +187,15 @@ class TaskManager:
         Returns:
             TaskState with the final result.
         """
+        if (
+            self._allowed_subagent_types is not None
+            and subagent_type not in self._allowed_subagent_types
+        ):
+            allowed = ", ".join(sorted(self._allowed_subagent_types))
+            raise ValueError(
+                f"Sub-agent '{subagent_type}' is not allowed. Allowed types: {allowed}."
+            )
+
         if conversation:
             self._ensure_parent(conversation)
 

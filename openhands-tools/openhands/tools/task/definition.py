@@ -218,6 +218,7 @@ class TaskToolSet(ToolDefinition[TaskAction, TaskObservation]):
         cls,
         conv_state: "ConversationState",  # noqa: ARG003
         confirmation_handler: "ConfirmationHandler | None" = None,
+        allowed_subagent_types: Sequence[str] | None = None,
     ) -> list[ToolDefinition]:
         """Create the task tool.
 
@@ -233,11 +234,24 @@ class TaskToolSet(ToolDefinition[TaskAction, TaskObservation]):
         """
         from openhands.tools.task.impl import TaskExecutor, TaskManager
 
-        agent_types_info = get_factory_info()
-
         registered = {d.name for d in get_registered_agent_definitions()}
+        allowed = (
+            frozenset(allowed_subagent_types)
+            if allowed_subagent_types is not None
+            else None
+        )
+        if allowed is not None:
+            unknown = allowed - registered
+            if unknown:
+                names = ", ".join(sorted(unknown))
+                raise ValueError(f"Unknown allowed sub-agent type(s): {names}")
+            if not allowed:
+                raise ValueError("allowed_subagent_types must not be empty")
+
+        agent_types_info = get_factory_info(allowed)
+        described_agents = registered if allowed is None else allowed
         task_tool_examples = "\n".join(
-            ex for name, ex in TASK_TOOL_EXAMPLES.items() if name in registered
+            ex for name, ex in TASK_TOOL_EXAMPLES.items() if name in described_agents
         )
 
         task_description = TASK_TOOL_DESCRIPTION.format(
@@ -245,7 +259,10 @@ class TaskToolSet(ToolDefinition[TaskAction, TaskObservation]):
             task_tool_examples=task_tool_examples,
         )
 
-        manager = TaskManager(confirmation_handler=confirmation_handler)
+        manager = TaskManager(
+            confirmation_handler=confirmation_handler,
+            allowed_subagent_types=allowed_subagent_types,
+        )
         task_executor = TaskExecutor(manager=manager)
 
         tools: list[ToolDefinition] = []

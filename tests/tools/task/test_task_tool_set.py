@@ -1,5 +1,7 @@
 import json
 
+import pytest
+
 from openhands.sdk import Agent, Conversation, LocalConversation, Tool
 from openhands.sdk.conversation.state import ConversationExecutionStatus
 from openhands.sdk.event.llm_convertible.observation import ObservationEvent
@@ -408,3 +410,32 @@ class TestTaskToolExamples:
         description = tools[0].description
         assert TASK_TOOL_EXAMPLES[included_name].strip() in description
         assert TASK_TOOL_EXAMPLES[excluded_name].strip() not in description
+
+    def test_allowlist_filters_description_and_examples(self):
+        register_agent(
+            name="code-explorer",
+            factory_func=lambda llm: Agent(llm=llm, tools=[]),
+            description="Explore code",
+        )
+        register_agent(
+            name="research-reader",
+            factory_func=lambda llm: Agent(llm=llm, tools=[]),
+            description="Read research",
+        )
+
+        tools = TaskToolSet.create(
+            conv_state=None,  # type: ignore[arg-type]
+            allowed_subagent_types=["research-reader"],
+        )
+        description = tools[0].description
+
+        assert "research-reader" in description
+        assert "code-explorer" not in description
+        assert TASK_TOOL_EXAMPLES["code-explorer"].strip() not in description
+
+    def test_allowlist_rejects_unknown_agent(self):
+        with pytest.raises(ValueError, match="Unknown allowed sub-agent"):
+            TaskToolSet.create(
+                conv_state=None,  # type: ignore[arg-type]
+                allowed_subagent_types=["missing-agent"],
+            )

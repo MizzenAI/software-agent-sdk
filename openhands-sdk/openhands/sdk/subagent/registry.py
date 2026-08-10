@@ -23,7 +23,7 @@ Example usage:
     )
 """
 
-from collections.abc import Callable
+from collections.abc import Callable, Collection
 from functools import lru_cache
 from pathlib import Path
 from threading import RLock
@@ -433,10 +433,14 @@ def get_agent_factory(name: str | None) -> AgentFactory:
     return factory
 
 
-def get_factory_info() -> str:
+def get_factory_info(names: Collection[str] | None = None) -> str:
     """Get formatted information about available agent factories."""
     with _registry_lock:
-        user_factories = dict(_agent_factories)
+        user_factories = {
+            name: factory
+            for name, factory in _agent_factories.items()
+            if names is None or name in names
+        }
 
     if not user_factories:
         return "- No user-registered agents yet. Call register_agent(...) to add custom agents."  # noqa: E501

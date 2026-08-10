@@ -713,6 +713,18 @@ class TestStartTask:
         assert result.id.startswith("task_")
         assert result.id in manager._tasks
 
+    def test_start_task_rejects_agent_outside_allowlist(self, tmp_path):
+        manager = TaskManager(allowed_subagent_types=["research-reader"])
+        parent = _make_parent_conversation(tmp_path)
+        register_builtins_agents()
+
+        with pytest.raises(ValueError, match="not allowed"):
+            manager.start_task(
+                prompt="explore",
+                subagent_type="code-explorer",
+                conversation=parent,
+            )
+
     def test_start_task_sets_parent_conversation(self, tmp_path):
         """start_task should set the parent conversation on first call."""
         manager = TaskManager()

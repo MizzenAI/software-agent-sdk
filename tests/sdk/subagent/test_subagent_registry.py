@@ -384,6 +384,18 @@ def test_factory_info() -> None:
     assert info.index("alpha-agent") < info.index("beta-agent")
 
 
+def test_factory_info_filters_agents() -> None:
+    def dummy(llm: LLM) -> Agent:  # type: ignore[unused-argument]
+        return cast(Agent, MagicMock())
+
+    register_agent(name="alpha-agent", factory_func=dummy, description="Alpha desc")
+    register_agent(name="beta-agent", factory_func=dummy, description="Beta desc")
+
+    info = get_factory_info({"beta-agent"})
+
+    assert info == "- **beta-agent**: Beta desc"
+
+
 def test_factory_info_mixed_tools_and_no_tools() -> None:
     """get_factory_info correctly shows tools only for agents that have them."""
 
